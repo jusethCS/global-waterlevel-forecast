@@ -1,0 +1,275 @@
+<link rel="stylesheet" href="https://site-assets.fontawesome.com/releases/v6.4.2/css/all.css">
+<link rel="stylesheet" href="https://kit-pro.fontawesome.com/releases/v6.4.2/css/pro.min.css">
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+<script src="https://unpkg.com/esri-leaflet/dist/esri-leaflet.js"></script>
+
+<app-app-template
+  #template
+  [imageUrl]="'/assets/img/national-water-level-forecast.png'"
+  [appName]="'GLOBAL WATERLEVEL FORECAST'"
+  [appUrl]="'/'"
+  (panelActivate)="resizeMap()"
+>
+
+
+<div panelContainer class="panel-container">
+  <app-dropdown iconClass="fa-solid fa-water-arrow-up" title="Waterlevel - flood warnings" [expanded]="true">
+    <div class="panel-subtitle">Flood warnings</div>
+    <div class="form-check form-switch">
+      <input class="form-check-input" type="checkbox" id="check-000yr"
+          [(ngModel)]="isActiveFlood000" (ngModelChange)="updateFloodWarnings()">
+      <label class="form-check-label" for="check-000yr">No warning</label>
+    </div>
+    <div class="form-check form-switch">
+      <input class="form-check-input" type="checkbox" id="check-002yr"
+          [(ngModel)]="isActiveFlood002" (ngModelChange)="updateFloodWarnings()">
+      <label class="form-check-label" for="check-002yr">2-years return period</label>
+    </div>
+    <div class="form-check form-switch">
+      <input class="form-check-input" type="checkbox" id="check-005yr"
+          [(ngModel)]="isActiveFlood005" (ngModelChange)="updateFloodWarnings()">
+      <label class="form-check-label" for="check-005yr">5-years return period</label>
+    </div>
+    <div class="form-check form-switch">
+      <input class="form-check-input" type="checkbox" id="check-010yr"
+          [(ngModel)]="isActiveFlood010" (ngModelChange)="updateFloodWarnings()">
+      <label class="form-check-label" for="check-010yr">10-years return period</label>
+    </div>
+    <div class="form-check form-switch">
+      <input class="form-check-input" type="checkbox" id="check-025yr"
+          [(ngModel)]="isActiveFlood025" (ngModelChange)="updateFloodWarnings()">
+      <label class="form-check-label" for="check-025yr">25-years return period</label>
+    </div>
+    <div class="form-check form-switch">
+      <input class="form-check-input" type="checkbox" id="check-050yr"
+          [(ngModel)]="isActiveFlood050" (ngModelChange)="updateFloodWarnings()">
+      <label class="form-check-label" for="check-050yr">50-years return period</label>
+    </div>
+    <div class="form-check form-switch">
+      <input class="form-check-input" type="checkbox" id="check-100yr"
+          [(ngModel)]="isActiveFlood100" (ngModelChange)="updateFloodWarnings()">
+      <label class="form-check-label" for="check-100yr">100-years return period</label>
+    </div>
+    <div class="panel-subtitle pt-3 pb-3">Model initialization</div>
+
+    <mat-form-field class="select scaled" appearance="outline">
+      <mat-label>Date:</mat-label>
+      <input matInput [matDatepicker]="picker" [formControl]="dateControl" [min]="minDate" [max]="maxDate">
+      <mat-datepicker-toggle matIconSuffix [for]="picker"></mat-datepicker-toggle>
+      <mat-datepicker #picker></mat-datepicker>
+    </mat-form-field>
+
+    <button mat-stroked-button class="dark-mode update-button scaled" (click)="updateFloodWarningsDay()">
+      <i class="fa-solid fa-arrows-rotate"></i>
+      Update data
+    </button>
+    <br>
+  </app-dropdown>
+</div>
+
+
+<div mapContainer>
+  <div id="map"></div>
+  <div class="reprod-container d-flex align-items-center justify-content-between px-3">
+    <div class="reprod-title">
+      <i class="fa-regular fa-sliders"></i>&nbsp;
+      Control and Animation Panel
+    </div>
+    <div>
+      <div class="reprod-panel-button d-flex justify-content-between">
+        <button mat-stroked-button class="dark-mode reprod-button" (click)="previuosTimeControl()">
+          <i class="fa-solid fa-backward"></i>
+        </button>
+        <button mat-stroked-button class="dark-mode reprod-button" (click)="playTimeControl()">
+          @if(isPlay){
+            <i class="fa-solid fa-pause"></i>
+          }@else {
+            <i class="fa-solid fa-play"></i>
+          }
+        </button>
+        <button mat-stroked-button class="dark-mode reprod-button">
+          <i class="fa-solid fa-stop"></i>
+        </button>
+        <button mat-stroked-button class="dark-mode reprod-button" (click)="nextTimeControl()">
+          <i class="fa-solid fa-forward"></i>
+        </button>
+      </div>
+    </div>
+    <div class="reprod-panel-save d-flex justify-content-between" (click)="downloadWarnings()">
+      <button mat-stroked-button class="dark-mode reprod-button">
+        <i class="fa-regular fa-download"></i>
+      </button>
+      <button mat-stroked-button class="dark-mode reprod-button" (click)="captureMap()">
+        <i class="fa-regular fa-camera-viewfinder"></i>
+      </button>
+    </div>
+  </div>
+</div>
+
+
+
+<div dataModalHeader>
+  <div class="container" id="panel-plot-container" #panelPlot>
+    <div class="modal-header-title"> WATER LEVEL FORECAST </div>
+      <div class="row modal-header-content">
+        <div class="col-sm-12 col-md-4 py-1">
+          <b>HYDROWEB CODE:</b> {{hydroweb}}
+        </div>
+        <div class="col-sm-12 col-md-4 py-1">
+          <b>STATION:</b> {{name}}
+        </div>
+        <div class="col-sm-12 col-md-4 py-1">
+          <b>BASIN:</b> {{basin}}
+        </div>
+      </div>
+      <div class="row modal-header-content">
+        <div class="col-sm-12 col-md-4 py-1">
+          <b>GEOGLOWS REACHID:</b> {{reachid}}
+        </div>
+        <div class="col-sm-12 col-md-4 py-1">
+          <b>COUNTRY:</b> {{country}}
+        </div>
+        <div class="col-sm-12 col-md-4 py-1">
+          <b>LATITUDE:</b> {{latitude}}
+        </div>
+      </div>
+      <div class="row modal-header-content">
+        <div class="col-sm-12 col-md-4 py-1">
+          <b>RIVER NAME:</b> {{river}}
+        </div>
+        <div class="col-sm-12 col-md-4 py-1">
+          <b>STATE:</b> {{state}}
+        </div>
+        <div class="col-sm-12 col-md-4 py-1">
+          <b>LONGITUDE:</b> {{longitude}}
+        </div>
+      </div>
+  </div>
+</div>
+
+<div dataModalBody>
+    <ul class="nav nav-tabs" id="panel-tab" role="tablist">
+      <li class="nav-item" role="presentation">
+      <button
+          class="nav-link active"
+          id="hydrograph-tab"
+          data-bs-toggle="tab"
+          data-bs-target="#hydrograph"
+          type="button"
+          role="tab"
+          aria-controls="hydrograph"
+          aria-selected="true"> Historical simulation </button>
+      </li>
+      <li class="nav-item" role="presentation">
+      <button
+          class="nav-link"
+          id="visual-analisis-tab"
+          data-bs-toggle="tab"
+          data-bs-target="#visual-analisis"
+          type="button"
+          role="tab"
+          aria-controls="visual-analisis"
+          aria-selected="false">Visual analysis</button>
+      </li>
+      <li class="nav-item" role="presentation">
+        <button
+            class="nav-link"
+            id="metrics-tab"
+            data-bs-toggle="tab"
+            data-bs-target="#metrics"
+            type="button"
+            role="tab"
+            aria-controls="metrics"
+            aria-selected="false"> Metrics </button>
+      </li>
+      <li class="nav-item" role="presentation">
+      <button
+          class="nav-link"
+          id="forecast-tab"
+          data-bs-toggle="tab"
+          data-bs-target="#forecast"
+          type="button"
+          role="tab"
+          aria-controls="forecast"
+          aria-selected="false"> Water Level Forecast </button>
+      </li>
+  </ul>
+
+  <div class="tab-content" id="panel-tab-content">
+    <div class="tab-pane fade show active" id="hydrograph" role="tabpanel" aria-labelledby="hydrograph-tab">
+      @if(isReadyDataPlot){
+        <plotly-plot id="historicalPlot"
+            [data]="historicalSimulationPlot.data" [layout]="historicalSimulationPlot.layout"
+            [useResizeHandler]="true" [style]="{position: 'relative', height: '400px', width:'100%'}">
+          </plotly-plot>
+          <button type="button" class="btn btn-primary btn-sm" (click)="downloadSimulation()">
+            <i class="fa-regular fa-download"></i>
+            &nbsp; Download Water Level Simulation
+          </button>
+          &nbsp;
+          <button type="button" class="btn btn-primary btn-sm" (click)="downloadHydroweb()">
+            <i class="fa-regular fa-download"></i>
+            &nbsp; Download Hydroweb Data
+          </button>
+      }@else {
+        <app-loading></app-loading>
+      }
+    </div>
+
+    <div class="tab-pane fade" id="visual-analisis" role="tabpanel" aria-labelledby="visual-analisis-tab">
+      @if(isReadyDataPlot){
+        <div class="col-12">
+          <plotly-plot id="dailyPlot"
+            [data]="dailyAveragePlot.data" [layout]="dailyAveragePlot.layout"
+            [useResizeHandler]="false" [style]="{position: 'relative', height: '400px', width:'100%'}">
+          </plotly-plot>
+        </div>
+        <div class="col-12">
+          <plotly-plot id="monthlyPlot"
+            [data]="monthlyAveragePlot.data" [layout]="monthlyAveragePlot.layout"
+            [useResizeHandler]="false" [style]="{position: 'relative', height: '400px', width:'100%'}">
+          </plotly-plot>
+        </div>
+      }@else {
+        <app-loading></app-loading>
+      }
+    </div>
+
+    <div class="tab-pane fade" id="metrics" role="tabpanel" aria-labelledby="metrics-tab">
+      @if(isReadyDataPlot){
+        <div style="padding: 12px;">
+          <div style="font-weight: bold;">Performance Metrics</div>
+          <div style="font-size: 12px;">The default list of statistics includes: Mean Error (ME), Root Mean Square Error (RMSE), Nash-Sutcliffe Efficiency (NSE), Kling-Gupta Efficiency (2009), Kling-Gupta Efficiency (2012), Pearson Correlation Coefficient, Spearman Correlation Coefficient, and Coefficient of Determination.</div>
+          <div [innerHTML]="metricTable"></div>
+        </div>
+      }@else {
+        <app-loading></app-loading>
+      }
+    </div>
+
+    <div class="tab-pane fade" id="forecast" role="tabpanel" aria-labelledby="forecast-tab">
+      @if(isReadyDataPlot){
+        <div>
+          <plotly-plot [data]="forecastPlot.data" [layout]="forecastPlot.layout"
+            [useResizeHandler]="true" [style]="{position: 'relative', height: '400px', width:'100%'}">
+          </plotly-plot>
+          <div #table></div>
+          <br>
+          <button type="button" class="btn btn-primary btn-sm" (click)="downloadForecast()">
+            <i class="fa-regular fa-download"></i>
+            &nbsp; Download Water Level Forecast
+          </button>
+        </div>
+      }@else {
+        <app-loading></app-loading>
+      }
+    </div>
+  </div>
+</div>
+
+
+
+
+
+
+</app-app-template>
